@@ -22,6 +22,8 @@ Multica 是当前采用的执行编排技术（外部依赖），不因本项目
 | 排障、改脚本、装 launchd 或定时任务 | 先 `grep -n 关键词 docs/LESSONS.md`，再搜全局坑 `/Users/nat/Documents/ChatGPT/个人/work/agent-kit/LESSONS.md` |
 | 开需求、拆任务、实现、审查 | 下面「Agent skills」一节 |
 | 写交接、验收别人的交接 | [docs/templates/handoff.md](docs/templates/handoff.md) 骨架；[OPERATIONS](docs/OPERATIONS.md)「交接写法」「报告与验收」 |
+| 用某个协同模式、改模式契约 | `modes/` 下对应契约（目前 [MA-01 思维评审](modes/MA-01-thinking-review.md)、[MA-02 工程审查](modes/MA-02-engineering-review.md)）；可执行步骤以 my-skills 为准 |
+| 查候选模式全景、为什么这样定 | [docs/design/2026-11-07-V1.0修订表.md](docs/design/2026-11-07-V1.0修订表.md)（取代 V1.0 冲突条款）；原文与决策记录在 `docs/design/` |
 
 项目长出接口、样式、发布等文档后，在这张表里加一行。
 
@@ -43,7 +45,9 @@ node scripts/check-rules.mjs     # 只跑通用规则检查
 ```
 AGENTS.md            入口（本文件）
 CURRENT.md           当前状态与唯一下一步；每轮交接写在顶部
+modes/               模式契约（只放已有真实运行的模式；候选模式不建空文件）
 docs/
+  design/            设计与评审：V1.0 候选全景、修订表、决策记录
   agents/            Matt Pocock 技能读的约定：issue 看板、分流标签、领域文档
   LESSONS.md         本项目的坑（排障、改脚本前先搜）
   OPERATIONS.md      操作手册：交接写法、报告与验收
