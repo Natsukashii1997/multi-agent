@@ -1,6 +1,17 @@
 # 当前状态
 
-更新：2026-11-07。I-MA-1（#1）已合并（PR #2 → `317945b`）：MA-01、MA-02 两份精简契约在 `modes/`，《多 Agent 协同 V1.0》降为候选全景，与修订表、决策记录一起在 `docs/design/`。常浩 11-07 已批准主 Skill 映射原则、MA-02 审查预算原则，并开放本仓库写入。唯一下一步：驿窗按 MA-02 第 10 节适配工程接力预算（Natsukashii1997/postpane#217，开工前先出方案交常浩确认）；agent-kit《工程流程》与 DT-ORC 6.4 的对齐随后各自开单。
+更新：2026-11-08。MA-01、MA-02 两份契约在 `modes/`（MA-02 已到 v0.2，与驿窗实现同步）；驿窗已按 MA-02 落地工程接力审查预算（postpane#233，`fb62a6a`）。唯一下一步：agent-kit《工程流程》第 8 节第 3 条与 DT-ORC ARCHITECTURE 6.4 对齐 MA-02 第 5 节（各在所属项目开单，常浩点头再做）。
+
+## MA-02 契约 v0.2：与驿窗实现同步（2026-11-08，Claude，常浩对 postpane#217 方案回复「按方案开工」，方案写明驿窗落地后改契约这一句；已提交、待合并，无需发布）
+
+- 时间：开工 `2026-11-08 01:38`（`date '+%F %H:%M'` 记录）。来由：postpane#233 已合并（`fb62a6a`），审查出口改在倒数第二行，与 v0.1 第 4 节「正文第一行」不一致。
+- 改了哪些文件：`modes/MA-02-engineering-review.md`（状态、主 Skill 入口、第 4 节写法、第 5 节驿窗一行标为已对齐、第 10 节版本记录）；`CURRENT.md`。
+- 测试：`node --test tests/*.test.mjs` 原样结果 `ℹ pass 4` / `ℹ fail 0`；`node scripts/check-rules.mjs` 输出 `通用规则检查通过`。
+- 验证：第 4 节写法对照 postpane `src/crates/platform/src/clients/chatgpt/handoffs.rs` 的 `review_exit` 与实机接力 `h1a1b708fc4400`、`h1a1b70aa6ed02`。
+- 截图：无。
+- 发布与回读：无需发布。
+- 与授权不一致之处、遗留问题、范围外发现：agent-kit 与 DT-ORC 的对齐没做，各自另开单。
+- 本轮新坑：无
 
 ## I-MA-1：MA-01、MA-02 精简契约 + V1.0 评审入库（2026-11-07，Claude，常浩回复「都按推荐」授权开放写入并执行本单；已合并 `317945b`，无需发布）
 
