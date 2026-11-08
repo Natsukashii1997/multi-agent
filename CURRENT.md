@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-11-08。MA-01、MA-02 两份契约在 `modes/`（MA-02 已到 v0.2，与驿窗实现同步）；驿窗已按 MA-02 落地工程接力审查预算（postpane#233，`fb62a6a`）。唯一下一步：agent-kit《工程流程》第 8 节第 3 条与 DT-ORC ARCHITECTURE 6.4 对齐 MA-02 第 5 节（各在所属项目开单，常浩点头再做）。
+更新：2026-11-08。MA-01、MA-02 两份契约在 `modes/`（MA-02 已到 v0.2，与驿窗实现同步）；驿窗已按 MA-02 落地工程接力审查预算（postpane#233，`fb62a6a`）。唯一下一步：agent-kit《工程流程》第 8 节第 3 条与 DT-ORC ARCHITECTURE 6.4 对齐 MA-02 第 5 节，已开单 Natsukashii1997/agent-kit#38、Natsukashii1997/digital-twin#94（只开单未改，常浩确认改法后再做）。
 
 ## MA-02 契约 v0.2：与驿窗实现同步（2026-11-08，Claude，常浩对 postpane#217 方案回复「按方案开工」，方案写明驿窗落地后改契约这一句；已提交、待合并，无需发布）
 
