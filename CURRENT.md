@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46 两次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`；全局路由一行已合并到 agent-kit（#46，`2911c84`），但**还没安装到本机**：已装全局指令有漂移（agent-kit#45），装了会冲掉 §14。唯一下一步：先修 agent-kit#45 并安装全局指令；之后进批 B：MA-03 首次试跑，并进一个真实 L2/L3 工程任务（候选卡 `docs/candidates.md`）。
+更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46、#47 三次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`。全局路由一行（agent-kit#46 `2911c84`）已在修完漂移（agent-kit#47 `e33e1cf`）后装到本机，doctor ✓7 ⚠0 ✗0，新开的 Claude / Codex 会话会读到。唯一下一步：批 B，MA-03 首次试跑，并进一个真实 L2/L3 工程任务（做法见 `docs/candidates.md`；任务由常浩指定，或从各项目 CURRENT 里挑候选给常浩选）。
 
 ## 批 A：多 Agent 协同配套设施（2026-11-08，Claude，常浩回复「按推荐，开工批 A」「按计划开工」；常浩回复「合并」，已合并 `514db58`，无需发布）
 
