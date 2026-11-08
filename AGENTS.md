@@ -23,6 +23,10 @@ Multica 是当前采用的执行编排技术（外部依赖），不因本项目
 | 开需求、拆任务、实现、审查 | 下面「Agent skills」一节 |
 | 写交接、验收别人的交接 | [docs/templates/handoff.md](docs/templates/handoff.md) 骨架；[OPERATIONS](docs/OPERATIONS.md)「交接写法」「报告与验收」 |
 | 用某个协同模式、改模式契约 | `modes/` 下对应契约（目前 [MA-01 思维评审](modes/MA-01-thinking-review.md)、[MA-02 工程审查](modes/MA-02-engineering-review.md)）；可执行步骤以 my-skills 为准 |
+| 选模式：这件事要不要协同、用哪个模式 | [docs/routing.md](docs/routing.md) |
+| 选 Agent：谁来承担哪个角色、现在谁可用 | [docs/agent-profile.md](docs/agent-profile.md)；用前跑 `node scripts/probe-agents.mjs` |
+| 试跑候选模式（MA-03～06） | [docs/candidates.md](docs/candidates.md) |
+| 记一次协同运行 | [docs/runs.md](docs/runs.md)，记进 `runs/runs.jsonl` |
 | 查候选模式全景、为什么这样定 | [docs/design/2026-11-07-V1.0修订表.md](docs/design/2026-11-07-V1.0修订表.md)（取代 V1.0 冲突条款）；原文与决策记录在 `docs/design/` |
 
 项目长出接口、样式、发布等文档后，在这张表里加一行。
@@ -38,6 +42,7 @@ Multica 是当前采用的执行编排技术（外部依赖），不因本项目
 ```sh
 node --test tests/*.test.mjs     # 交接格式 + 通用规则（含自测）
 node scripts/check-rules.mjs     # 只跑通用规则检查
+node scripts/probe-agents.mjs    # Agent 动态档案：额度、在线、Hermes 与 Codex 是否同一账号（只读，不耗额度）
 ```
 
 ## 结构
@@ -46,7 +51,12 @@ node scripts/check-rules.mjs     # 只跑通用规则检查
 AGENTS.md            入口（本文件）
 CURRENT.md           当前状态与唯一下一步；每轮交接写在顶部
 modes/               模式契约（只放已有真实运行的模式；候选模式不建空文件）
+runs/runs.jsonl      所有模式共用的运行记录（字段见 docs/runs.md）
 docs/
+  routing.md         场景路由：遇到什么事用哪个模式
+  agent-profile.md   协作角色与 Agent 能力档案
+  candidates.md      候选模式卡（MA-03～06）
+  runs.md            运行记录字段说明
   design/            设计与评审：V1.0 候选全景、修订表、决策记录
   agents/            Matt Pocock 技能读的约定：issue 看板、分流标签、领域文档
   LESSONS.md         本项目的坑（排障、改脚本前先搜）
@@ -54,6 +64,7 @@ docs/
   templates/handoff.md  交接一节的骨架
 scripts/
   check-rules.mjs    通用规则检查（只查机器能判定的）
+  probe-agents.mjs   Agent 动态档案探测
 tests/               node:test 测试
 ```
 
