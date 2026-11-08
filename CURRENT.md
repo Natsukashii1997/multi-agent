@@ -1,8 +1,8 @@
 # 当前状态
 
-更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行。批 A 配套设施（#4，PR #5）已做完：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`。PR #5 经 ChatGPT 审 1 轮（L1，返修），已按意见补改、补改未复审。Codex 额度已核实可用，和 Hermes 是同一账号。唯一下一步：常浩说「合并」后先合 PR #5，再合 agent-kit#46（全局路由一行）；之后进批 B：MA-03 首次试跑并进一个真实 L2/L3 工程任务。
+更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46 两次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`；全局路由一行已合并到 agent-kit（#46，`2911c84`），但**还没安装到本机**：已装全局指令有漂移（agent-kit#45），装了会冲掉 §14。唯一下一步：先修 agent-kit#45 并安装全局指令；之后进批 B：MA-03 首次试跑，并进一个真实 L2/L3 工程任务（候选卡 `docs/candidates.md`）。
 
-## 批 A：多 Agent 协同配套设施（2026-11-08，Claude，常浩回复「按推荐，开工批 A」「按计划开工」；已提交、审查返修已补改未复审、待合并，无需发布）
+## 批 A：多 Agent 协同配套设施（2026-11-08，Claude，常浩回复「按推荐，开工批 A」「按计划开工」；常浩回复「合并」，已合并 `514db58`，无需发布）
 
 - 时间：开工 `2026-11-08 16:04`（`date '+%F %H:%M'` 记录）。来由：常浩要求把其余模式的 skill 和配套设施搭出来；按评审结论不建空 Skill，先搭配套设施（#4）。
 - 改了哪些文件：
