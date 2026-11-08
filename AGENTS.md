@@ -42,7 +42,7 @@ Multica 是当前采用的执行编排技术（外部依赖），不因本项目
 ```sh
 node --test tests/*.test.mjs     # 交接格式 + 通用规则（含自测）
 node scripts/check-rules.mjs     # 只跑通用规则检查
-node scripts/probe-agents.mjs    # Agent 动态档案：额度、在线、Hermes 与 Codex 是否共用额度（只读，不耗额度）
+node scripts/probe-agents.mjs    # Agent 动态档案：额度、在线、Hermes 与 Codex 是否同一账号（只读，不耗额度）
 ```
 
 ## 结构

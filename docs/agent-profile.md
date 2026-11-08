@@ -42,12 +42,12 @@ node scripts/probe-agents.mjs          # 给人看
 node scripts/probe-agents.mjs --json   # 给脚本用
 ```
 
-只读、不调用任何模型、不消耗额度。查六项：Claude 额度、Codex 额度（来自驿窗定时读的快照）、Codex CLI 登录、驿窗进程、Hermes 网关、Hermes 与 Codex 是否共用一份额度。快照超过 24 小时，算「未核实」。
+只读、不调用任何模型、不消耗额度。查六项：Claude 额度、Codex 额度（来自驿窗定时读的快照）、Codex CLI 登录、驿窗进程、Hermes 网关、Hermes 与 Codex 是不是同一个 ChatGPT 账号。快照超过 24 小时、用量不是合法数字、通用窗口都已过重置时间的，算「未核实」；模型专属额度用尽时标「部分用尽」。外部诊断文字脱敏后才显示。
 
 2026-11-08 16:05 的结果（只作示例，用的时候以当次运行为准）：
 
 - Codex：Plus 档，5 小时窗口已用 15%，一周已用 33%，CLI 已登录。
-- **Hermes 与 Codex 共用一份额度**：Hermes 大脑（`~/.hermes/config.yaml`，provider `openai-codex`）和 Codex CLI 是同一个 ChatGPT 账号。用 Codex 做独立验证会和 Hermes 抢额度，安排 MA-03 试跑要避开 Hermes 夜跑。
+- **Hermes 与 Codex 是同一个 ChatGPT 账号**：Hermes 大脑（`~/.hermes/config.yaml`，provider `openai-codex`）和 Codex CLI 用的是同一个账号。Codex 额度按账号计，所以推断两边共用一份额度（这是推断，没有用消耗数据证实）。用 Codex 做独立验证可能和 Hermes 抢额度，安排 MA-03 试跑要避开 Hermes 夜跑。
 - Claude：Max 20x 档，额度可用；驿窗、Hermes 网关都在运行。
 
 驿窗只能查进程在不在；ChatGPT 网页通道连没连上，以发起接力时驿窗的返回为准。

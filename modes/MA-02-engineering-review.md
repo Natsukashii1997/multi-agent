@@ -27,7 +27,7 @@
 | Verifier | Claude 自测；L3 需要时加独立验证方 | 自测不算独立验证 |
 | Coordinator | Claude；Hermes 派单的任务由 Hermes 记录状态 | Hermes 不出技术「通过」 |
 
-现状：DT-ORC ARCHITECTURE 写明「L1/L2 研发以 Claude + ChatGPT High 为固定主线；Codex 不是固定第三站」。10-31 起 Codex 额度不足，本机近期工程接力没有 Codex 参与；2026-11-08 核实额度已可用，但和 Hermes 共用一份（[agent-profile](../docs/agent-profile.md) 第 4 节）。
+现状：DT-ORC ARCHITECTURE 写明「L1/L2 研发以 Claude + ChatGPT High 为固定主线；Codex 不是固定第三站」。10-31 起 Codex 额度不足，本机近期工程接力没有 Codex 参与；2026-11-08 核实额度已可用，但和 Hermes 是同一个账号，推断共用一份（[agent-profile](../docs/agent-profile.md) 第 4 节）。
 
 ## 4. 输入与交接物（接口）
 
