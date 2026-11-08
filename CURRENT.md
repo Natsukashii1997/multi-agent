@@ -15,7 +15,7 @@
   - `docs/design/2026-11-07-V1.0修订表.md`：第 4 节指向候选卡，「仍未核实」两条改为已核实；
   - `AGENTS.md`：导航表 4 行、运行命令、结构。
 - 测试：`node --test tests/*.test.mjs` 原样结果 `ℹ pass 17` / `ℹ fail 0`（补改后；补改前 11 / 0）；`node scripts/check-rules.mjs` 输出 `通用规则检查通过`。
-- 审查：驿窗 `h1a1ba374ab600`，L1 第 1 轮，P0 0 / P1 3 / P2 3 / P3 1，出口「返修」。补改：候选卡字段改成 runs 已有字段并加模拟记录测试；探测对非法用量、已过重置时间的窗口标未核实，模型专属额度用尽标「部分用尽」，外部诊断文字脱敏，结构异常不抛错，Hermes 多账号标未核实，「共用额度」改为「同账号、推断共用」；runs 增加 `case_id`、`resolution`、`baseline`，`p0p1` 拆成 `reported_p0p1` 与 `verified_findings`，SBX-6/7 改为 `未协同`；routing 改为路由一行在 agent-kit#46 里做。L1 预算用完，PR 上写「补改未复审」。本次审查自身记为 `R-20261108-03`。
+- 审查：驿窗 `h1a1ba374ab600`，L1 第 1 轮，P0 0 / P1 3 / P2 3 / P3 1，出口「返修」。补改：候选卡字段改成 runs 已有字段并加模拟记录测试；探测对非法用量、已过重置时间的窗口标未核实，模型专属额度用尽标「部分用尽」，外部诊断文字脱敏，结构异常不抛错，Hermes 多账号标未核实，「共用额度」改为「同账号、推断共用」；runs 增加 `case_id`、`resolution`、`baseline`，`p0p1` 拆成 `reported_p0p1` 与 `verified_findings`，SBX-6/7 改为 `未协同`；routing 改为路由一行在 agent-kit#46 里做。L1 预算用完，PR 上写「补改未复审」。本次审查自身记为 `R-20261108-03`；agent-kit#46 的审查（1 条 P2，已补改未复审，提交 `1961543`）记为 `R-20261108-04`。
 - 验证：`node scripts/probe-agents.mjs` 本机实跑六项（2026-11-08 16:05，补改后 16:19 复跑），结果写在 agent-profile 第 4 节；测试先抓到一个真缺陷（「Not logged in」被当成已登录），已修。runs.jsonl 每条对过驿窗 `handoffs.json`（轮次、verdict、时间）与 PR（digital-twin#93、niuma-home#23 的状态和正文）。
 - 截图：无。
 - 发布与回读：无需发布。
