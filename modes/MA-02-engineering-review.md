@@ -1,6 +1,6 @@
 # MA-02 工程审查闭环｜模式契约 v0.2
 
-- 状态：运行中（还没有主 Skill；审查预算原则已获常浩批准；驿窗已落地（postpane#233，`fb62a6a`），agent-kit《工程流程》与 DT-ORC 6.4 的对齐待开单）
+- 状态：运行中（还没有主 Skill；审查预算原则已获常浩批准；四处已对齐：本契约、驿窗 postpane#233 `fb62a6a`、agent-kit#41 `59a22a2`、digital-twin#95 `5957acf`；新规则下已有 L1、L3 各 1 次真实运行，见第 7 节）
 - 主 Skill 入口：目前是驿窗 `relay_to_chatgpt` 的工具说明（送审包六项、`risk` 与 `extra` 参数、回信末两行格式），加上各项目 AGENTS.md 的审查规矩。候选主 Skill `engineering-review` 还没立项，要按 my-skills 七站两闸走，不因为有这份契约就自动成立。
 - 契约来源：从驿窗 15 单真实工程接力（2026-11-06～07）反推，重点看第 7 节三条链路；常浩 2026-11-07 回复「都按推荐」，批准审查预算原则（[修订表](../docs/design/2026-11-07-V1.0修订表.md) 第 3 节）；I-MA-1（#1）。
 
@@ -27,7 +27,7 @@
 | Verifier | Claude 自测；L3 需要时加独立验证方 | 自测不算独立验证 |
 | Coordinator | Claude；Hermes 派单的任务由 Hermes 记录状态 | Hermes 不出技术「通过」 |
 
-现状：DT-ORC ARCHITECTURE 写明「L1/L2 研发以 Claude + ChatGPT High 为固定主线；Codex 不是固定第三站」。10-31 起 Codex 额度不足，本机近期工程接力没有 Codex 参与。
+现状：DT-ORC ARCHITECTURE 写明「L1/L2 研发以 Claude + ChatGPT High 为固定主线；Codex 不是固定第三站」。10-31 起 Codex 额度不足，本机近期工程接力没有 Codex 参与；2026-11-08 核实额度已可用，但和 Hermes 共用一份（[agent-profile](../docs/agent-profile.md) 第 4 节）。
 
 ## 4. 输入与交接物（接口）
 
@@ -75,8 +75,10 @@
 | dt-sandbox SBX-8 原子写入（PR #4） | `h1a1b486b8d801`、`h1a1b48f66f200` | 每单 1 次回信「需修改」；第 2 轮被另开成新单 | 第 2 轮只剩 2 条 P2，补改后不再复审就合并，PR 上写「补改未复审」 | 第 2 单应关联原单，算第 2 轮（不能借新单重置）；只剩 P2 按「通过附建议」收口 |
 | dt-sandbox SBX-9 反向验证（PR #5） | `h1a1b4afc92700` | 1 次回信「通过」（P0/P1/P2 都是 0） | 一轮收口 | 正样本 |
 | dt-sandbox SBX-6 / SBX-7 | 未送审 | — | L1，隔离容器复跑 12 项全过，常浩决定跳过送审 | 正样本：L1 有测试证据可以不送审，但要留下「谁决定、为什么」 |
+| 数字分身 M5 首夜夜跑主控（digital-twin PR #93） | `h1a1b894e96600`、`h1a1b8d23ccb01` | L3，3 次回信：需修改 ×3。第 2 轮出口「决策升级」，常浩选「修完再复审」，授权第 3 轮只验 4 处 | 第 3 轮仍返修，之后合并（2026-11-08 10:07），收口方式未核实 | **新规则下第 1 次 L3**：到预算就停、交常浩、授权写明范围，都按契约走了。第 3 轮由无头会话代发，所以有第二个接力 id，但送审包写了「第 3 轮」，不算拆单 |
+| 月度用户策略批 0 定向验收（niuma-home PR #23） | `h1a1b96f842900` | L1，1 次回信「需修改」（3 条 P1、1 条 P2） | L1 预算用完转回；最小补改后在 PR 上写「补改未复审」（`76ae0c7`），合并 | **新规则下第 1 次 L1**：完全按契约收口 |
 
-轮次来自 `handoffs.json` 的 steps 记录；SBX-6/7、SBX-8 的收口细节来自 my-skills `thinking-review/research/cases.md` C-12～C-14。
+轮次来自 `handoffs.json` 的 steps 记录；SBX-6/7、SBX-8 的收口细节来自 my-skills `thinking-review/research/cases.md` C-12～C-14。2026-11-08 起，每次运行的机器可读记录在 [runs/runs.jsonl](../runs/runs.jsonl)（字段见 [docs/runs.md](../docs/runs.md)），本表只留摘要。
 
 ## 8. 人工必须决定的事项
 
@@ -94,4 +96,5 @@
 
 - 契约 v0.1。送审前分级、四档语义、续审判定方法要做成主 Skill 时，按七站两闸走，Skill 写操作步骤，本契约写边界和预算。
 - v0.2（2026-11-08）：第 4 节改为驿窗已实现的写法（`risk` 参数、PR 链接跨会话累计、倒数第二行审查出口），取代 v0.1 的「正文第一行」写法。
-- 后续开单：agent-kit《工程流程》与 DT-ORC 6.4 对齐本表（驿窗已于 postpane#233 对齐）。
+- ~~后续开单：agent-kit《工程流程》与 DT-ORC 6.4 对齐本表~~ 已完成：agent-kit#41（`59a22a2`）、digital-twin#95（`5957acf`）。
+- 2026-11-08（#4）：第 7 节补 M5 #93、月度用户策略批 0 两次新规则运行；运行记录统一到 `runs/runs.jsonl`。
