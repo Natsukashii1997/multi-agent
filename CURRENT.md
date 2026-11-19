@@ -4,6 +4,17 @@
 
 更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46、#47 三次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`。全局路由一行（agent-kit#46 `2911c84`）已在修完漂移（agent-kit#47 `e33e1cf`）后装到本机，doctor ✓7 ⚠0 ✗0，新开的 Claude / Codex 会话会读到。唯一下一步：常浩 11-08 改为「一个一个做，先把 MA-02 的 skill 跑出来」，MA-03 试跑（候选：trainee-hub PR #27）暂缓。engineering-review 1.0.0 在 my-skills#77、分支 `claude/77-engineering-review`（worktree `~/Documents/ChatGPT/个人/work/.worktrees/my-skills-77`）：治理审计 0 错误 0 警告，盲测第 1 轮 5/5 后按 5 处缺陷修订，第 2 轮打分中；剩：第 2 轮全过 → 开 PR → 按新 skill 走 L1 送审收口 → 常浩批准合并 → links.tsv 已登记、主目录跑 link.sh → 本仓库 MA-02 契约与 routing.md 改为「主 Skill：engineering-review 1.0.0」。
 
+## LESSONS 升级行补层级词、加规则检查（2026-11-19，Claude，跨项目复盘收尾子 agent，常浩批了「老项目接入 LESSONS 升级行检查：一次补齐」；已提交到 `claude/lessons-level`、PR 待合并、无需发布）
+
+- 时间：开工 `2026-11-19 10:18`（`date '+%F %H:%M'` 记录）。来由：跨项目复盘 D 批，各项目 LESSONS 的「升级」行统一带层级词，并由规则检查守住。
+- 改了哪些文件：`scripts/check-rules.mjs`（加 `lessons` 规则：每条 `## L-xx` 要有以〔结构〕〔机检〕〔体检〕〔文字〕〔提醒〕开头的「- 升级：」一行，写法照起步骨架）；`tests/check-rules.test.mjs`（加 1 条测试：缺升级行、升级行不带层级词各报一次，格式样例和合规条目不误报）；`docs/LESSONS.md`（「怎么升级」补一条层级词要求，格式样例改成「〔提醒〕未升级。」，与起步骨架一致）；本仓库 LESSONS 还没有真实条目，规则在真实文件上为绿。另修起步骨架带来的漏报：判断占位标题前先去掉反引号里的内容（标题里的 `<all_urls>` 之类原来会让整条不查），写法同 chatgpt-clipper#10（`cd80285`），并加 1 条测试；骨架本身由主会话另行处理。本节交接。
+- 测试：`node --test tests/*.test.mjs` 改前 `ℹ pass 17` / `ℹ fail 0`，改后 `ℹ pass 19` / `ℹ fail 0`；`node scripts/check-rules.mjs` 改前改后都输出 `通用规则检查通过`。
+- 验证：在 worktree `~/Sandbox/worktrees/multi-agent-lessons-level` 里跑；改前改后日志在 `~/Library/Application Support/multi-agent/evidence/2026-11-19-lessons-level/`。
+- 截图：无。
+- 发布与回读：无需发布。
+- 与授权不一致之处、遗留问题、范围外发现：规则检查没有接进 CI 或提交前钩子，只在手动跑测试时生效（照实记录，没为此改结构）。
+- 本轮新坑：无。
+
 ## 批 A：多 Agent 协同配套设施（2026-11-08，Claude，常浩回复「按推荐，开工批 A」「按计划开工」；常浩回复「合并」，已合并 `514db58`，无需发布）
 
 - 时间：开工 `2026-11-08 16:04`（`date '+%F %H:%M'` 记录）。来由：常浩要求把其余模式的 skill 和配套设施搭出来；按评审结论不建空 Skill，先搭配套设施（#4）。
