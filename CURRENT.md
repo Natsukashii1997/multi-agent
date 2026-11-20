@@ -4,6 +4,16 @@
 
 更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46、#47 三次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`。全局路由一行（agent-kit#46 `2911c84`）已在修完漂移（agent-kit#47 `e33e1cf`）后装到本机，doctor ✓7 ⚠0 ✗0，新开的 Claude / Codex 会话会读到。唯一下一步：常浩 11-08 改为「一个一个做，先把 MA-02 的 skill 跑出来」，MA-03 试跑（候选：trainee-hub PR #27）暂缓。engineering-review 1.0.0 在 my-skills#77、分支 `claude/77-engineering-review`（worktree `~/Documents/ChatGPT/个人/work/.worktrees/my-skills-77`）：治理审计 0 错误 0 警告，盲测第 1 轮 5/5 后按 5 处缺陷修订，第 2 轮打分中；剩：第 2 轮全过 → 开 PR → 按新 skill 走 L1 送审收口 → 常浩批准合并 → links.tsv 已登记、主目录跑 link.sh → 本仓库 MA-02 契约与 routing.md 改为「主 Skill：engineering-review 1.0.0」。
 
+## 推送前钩子：从 worktree 推送不再把测试的 git 操作落到本仓库（2026-11-20，Claude，常浩回「停用并修」；已提交、PR 待合并，无需发布）
+
+- 时间：开工 `2026-11-20 11:36`。★ 来由：今天装的推送前钩子（骨架 0.4.0）从 worktree 推送时，git 把本仓库的位置（`GIT_DIR`）带进钩子，钩子跑的 `tests/hooks.test.mjs` 在临时目录建仓库、提交、推送都继承了它。临时仓库实测：推送的分支多出测试的 3 个提交，主目录变成裸仓库、不能用，测试却全过。本仓库 11:36 检查时还没中招，钩子已临时停用。
+- 改了哪些文件：`scripts/hooks/pre-push`（跑检查前 `unset $(git rev-parse --local-env-vars)`）、`tests/hooks.test.mjs`（自己的 git 调用不继承这些变量；新增一条从 worktree 真推的用例，旧钩子下失败）。和骨架 0.4.1（my-skills#116）一致。
+- 测试：在本 worktree 里 `sh scripts/hooks/pre-push`（规则检查加本项目的测试命令）退出码 0：`通用规则检查通过`，`node --test tests/*.test.mjs` 原样 `ℹ pass 23` / `ℹ fail 0`；`node --test tests/hooks.test.mjs` 单跑 `ℹ pass 4` / `ℹ fail 0`，换回旧钩子时新用例失败（在骨架上验证，见 my-skills#116）。
+- 验证环境：替身（临时 git 仓库、本机裸仓库、真实的 worktree 和推送）。本仓库的 `core.hooksPath` 现在是停用状态，本 PR 合并、主目录更新后再装回，装后从 worktree 真推一次再算验收。
+- 外部前提与实测：依赖 git 在 worktree 里给钩子带 `GIT_DIR`、以及 `git rev-parse --local-env-vars` 列出要清的变量，都在临时仓库实测过。
+- 与授权不一致之处、遗留问题、范围外发现：停用钩子用的是 `git config --unset core.hooksPath`，装回是 `git config core.hooksPath scripts/hooks`。
+- 本轮新坑：无（跨项目的坑，已向常浩提全局坑提案，未写入）。
+
 ## 装提交、推送前的必经检查钩子（2026-11-20，Claude，常浩批复盘 P4、P6「批（按改过的）」；已提交、PR 待合并，无需发布）
 
 - 时间：开工 `2026-11-20 11:02`。★ 来由：跨项目复盘 P6「检查脚本接进必经环节」：没有 CI 的仓库装 pre-push 钩子；P4 的 commit-msg 钩子一起装。钩子来自起步骨架 0.4.0（my-skills#112）。
