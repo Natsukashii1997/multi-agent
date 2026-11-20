@@ -42,6 +42,7 @@ Multica 是当前采用的执行编排技术（外部依赖），不因本项目
 ```sh
 node --test tests/*.test.mjs     # 交接格式 + 通用规则（含自测）
 node scripts/check-rules.mjs     # 只跑通用规则检查
+git config core.hooksPath scripts/hooks   # 装提交、推送前的必经检查（每个克隆、每台电脑各一次；不用 --no-verify 绕过）
 node scripts/probe-agents.mjs    # Agent 动态档案：额度、在线、Hermes 与 Codex 是否同一账号（只读，不耗额度）
 ```
 
