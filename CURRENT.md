@@ -4,6 +4,17 @@
 
 更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46、#47 三次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`。全局路由一行（agent-kit#46 `2911c84`）已在修完漂移（agent-kit#47 `e33e1cf`）后装到本机，doctor ✓7 ⚠0 ✗0，新开的 Claude / Codex 会话会读到。唯一下一步：常浩 11-08 改为「一个一个做，先把 MA-02 的 skill 跑出来」，MA-03 试跑（候选：trainee-hub PR #27）暂缓。engineering-review 1.0.0 在 my-skills#77、分支 `claude/77-engineering-review`（worktree `~/Documents/ChatGPT/个人/work/.worktrees/my-skills-77`）：治理审计 0 错误 0 警告，盲测第 1 轮 5/5 后按 5 处缺陷修订，第 2 轮打分中；剩：第 2 轮全过 → 开 PR → 按新 skill 走 L1 送审收口 → 常浩批准合并 → links.tsv 已登记、主目录跑 link.sh → 本仓库 MA-02 契约与 routing.md 改为「主 Skill：engineering-review 1.0.0」。
 
+## MA-02 第 4 节「送达未确认」对齐驿窗 postpane#466：没送成的不算（#14）（2026-11-20，Claude，常浩对驿窗改动确认「送达未确认两处」回「都改」，确认里写明四处规则文字同步改；已提交、PR 待常浩定合并，无需发布）
+
+- 时间：开工 `2026-11-20 14:05`（`date '+%F %H:%M'` 记录）。★ 来由：驿窗 postpane#466（PR Natsukashii1997/postpane#468）把「没送成」从「送达未确认」里分出来：插件明确回报没点过发送，或发出时插件没连上、话没出驿窗的，按没送成处理、可以直接重送。本契约第 4 节还是旧口径。
+- 改了哪些文件：`modes/MA-02-engineering-review.md`（第 4 节「送达未确认」一条末尾补一段：上面两种不算送达未确认，接力和发送前一样、自动往返不停、同一段话可以直接重送；点过发送没见开始、插件没说点没点过、补格式没送成的仍按送达未确认。修订记录加一行）。别的规则没动；第 5 节「不计轮：没送到、也没有回信」本来就和新口径一致。
+- 测试：`node --test tests/*.test.mjs` 原样结果 `ℹ pass 23` / `ℹ fail 0`；`node scripts/check-rules.mjs`「通用规则检查通过」。★
+- 验证：只有文字改动，对照驿窗 `docs/chatgpt-channel.md`「审核门」里 #466 那段逐句核过；没有可运行的行为。
+- 截图：无。
+- 发布与回读：无需发布。
+- 与授权不一致之处、遗留问题、范围外发现：本 PR 开出时驿窗 #468 还在第 2 轮复审，合并顺序建议先驿窗 #468、后本 PR；姊妹改动：digital-twin#253、my-skills#120（issue 号，各开一个 PR）。
+- 本轮新坑：无
+
 ## 推送前钩子：从 worktree 推送不再把测试的 git 操作落到本仓库（2026-11-20，Claude，常浩回「停用并修」；已提交、PR 待合并，无需发布）
 
 - 时间：开工 `2026-11-20 11:36`。★ 来由：今天装的推送前钩子（骨架 0.4.0）从 worktree 推送时，git 把本仓库的位置（`GIT_DIR`）带进钩子，钩子跑的 `tests/hooks.test.mjs` 在临时目录建仓库、提交、推送都继承了它。临时仓库实测：推送的分支多出测试的 3 个提交，主目录变成裸仓库、不能用，测试却全过。本仓库 11:36 检查时还没中招，钩子已临时停用。
