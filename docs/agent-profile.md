@@ -27,6 +27,7 @@
 
 - Hermes 只有一个，就是常浩的数字分身。它不因为底层用了某个模型，就自动拥有那个模型 CLI 的能力。
 - Codex 在数码世界 9–10 月做过独立复核。10-31 起审查改走 ChatGPT，DT-ORC ARCHITECTURE 写明「Codex 不是固定第三站」。它是可选的验证方，不是默认验证方。
+- 派 Codex 写代码用 `node scripts/codex-worker.mjs <工作树> "任务"`（追加：`--resume <会话ID>`），不直接调 `codex exec`：本机 `~/.codex/config.toml` 默认完全访问。脚本固定模型和档位、沙箱 workspace-write、不提交不推送，工作树在 main/master 上时拒绝。只派接口已经定死、和页面无关的独立模块；接口、验收标准、要一起改的同类写进任务；交回后派活方读 diff、自己跑测试。2026-11-27 实测：本机 ChatGPT 账号用 `gpt-6-luna`，`gpt-6.2-astra`、`gpt-6.1-sol` 报「not supported」。
 - Aily、OpenClaw 不算现役 Agent（V1.0 第 2.2 节）。
 
 ## 3. 选择约束

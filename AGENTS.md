@@ -44,6 +44,7 @@ node --test tests/*.test.mjs     # 交接格式 + 通用规则（含自测）
 node scripts/check-rules.mjs     # 只跑通用规则检查
 git config core.hooksPath scripts/hooks   # 装提交、推送前的必经检查（每个克隆、每台电脑各一次；不用 --no-verify 绕过）
 node scripts/probe-agents.mjs    # Agent 动态档案：额度、在线、Hermes 与 Codex 是否同一账号（只读，不耗额度）
+node scripts/codex-worker.mjs <工作树> "任务"   # 派 Codex 写独立模块（固定档位、workspace-write 沙箱、不提交）；追加用 --resume <会话ID>
 ```
 
 ## 结构
@@ -66,6 +67,7 @@ docs/
 scripts/
   check-rules.mjs    通用规则检查（只查机器能判定的）
   probe-agents.mjs   Agent 动态档案探测
+  codex-worker.mjs   派 Codex 写代码的包装（不直接调 codex exec）
 tests/               node:test 测试
 ```
 
