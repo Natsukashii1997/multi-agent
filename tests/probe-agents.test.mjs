@@ -12,6 +12,7 @@ const base = (over = {}) => ({
     providers: [provider('claude', FRESH, [quota('5h', 22), quota('Weekly', 41, 604800)]), provider('codex', FRESH, [quota('5h', 15), quota('Weekly', 33, 604800)])],
   },
   postpaneRunning: true,
+  antigravityRunning: true,
   codexLogin: { code: 0, out: 'Logged in using ChatGPT\n' },
   hermesLaunchctl: { code: 0, out: '{\n\t"PID" = 39597;\n}' },
   accounts: { codex: 'aaa', hermes: 'aaa', hermesAccounts: 1 },
@@ -27,6 +28,7 @@ test('正常：全部可用，同账号', () => {
   assert.match(item(r, 'Codex 额度').detail, /5h 已用 15%/);
   assert.equal(item(r, 'Codex CLI 登录').status, '可用');
   assert.equal(item(r, '驿窗').status, '可用');
+  assert.equal(item(r, 'Antigravity（Gemini）').status, '可用');
   assert.equal(item(r, 'Hermes 网关').status, '可用');
   assert.equal(item(r, 'Hermes 与 Codex 账号').status, '同账号');
   assert.match(item(r, 'Hermes 与 Codex 账号').detail, /推断/);
@@ -123,4 +125,9 @@ test('账号比对只输出哈希；Hermes 多账号时判断不了', () => {
   assert.equal(multi.hermesAccounts, 2);
   const r = evaluate(base({ accounts: multi }), NOW);
   assert.equal(item(r, 'Hermes 与 Codex 账号').status, '未核实');
+});
+
+test('Antigravity：桌面版没开标不可用，没检查标未核实', () => {
+  assert.equal(item(evaluate(base({ antigravityRunning: false }), NOW), 'Antigravity（Gemini）').status, '不可用');
+  assert.equal(item(evaluate(base({ antigravityRunning: undefined }), NOW), 'Antigravity（Gemini）').status, '未核实');
 });

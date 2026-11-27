@@ -2,7 +2,7 @@
 // Agent 动态档案探测（docs/agent-profile.md「动态条件」）：只读本机现成的状态，不调用任何模型、不消耗额度、不改文件。
 //   node scripts/probe-agents.mjs          打印给人看的结果
 //   node scripts/probe-agents.mjs --json   输出 JSON（给别的脚本用）
-// 数据来源：驿窗（PostPane）定时读的额度快照 last-account-readings.json；launchctl；`codex login status`；
+// 数据来源：驿窗（PostPane）定时读的额度快照 last-account-readings.json；launchctl；`codex login status`；pgrep（驿窗、Antigravity 进程）；
 // ~/.codex/auth.json 与 ~/.hermes/auth.json 里的 ChatGPT 账号 id（只在本机比对哈希，不输出账号、不输出凭据）。
 // 原则：拿不准就标「未核实」，不默认「可用」（V1.0 修订表第 2 节：没核实的动态条件不能当成模式的必备能力）。
 // 外部来的诊断文字（快照 notice、命令输出）不原样透传，只给固定措辞或脱敏后的短句。
@@ -104,7 +104,7 @@ function quotaItem(name, provider, now) {
 }
 
 // 纯函数：输入都是已读到的原始数据，方便测试
-export function evaluate({ readings, postpaneRunning, codexLogin, hermesLaunchctl, accounts }, now = new Date()) {
+export function evaluate({ readings, postpaneRunning, antigravityRunning, codexLogin, hermesLaunchctl, accounts }, now = new Date()) {
   const byName = Object.fromEntries(arr(readings?.providers).filter(p => p && typeof p.provider === 'string').map(p => [p.provider, p]));
   const items = [];
   items.push(quotaItem('Claude 额度', byName.claude, now));
@@ -122,6 +122,15 @@ export function evaluate({ readings, postpaneRunning, codexLogin, hermesLaunchct
     postpaneRunning
       ? { name: '驿窗', status: '可用', detail: '进程在运行；ChatGPT 网页通道连没连上，以发起接力时驿窗的返回为准' }
       : { name: '驿窗', status: '不可用', detail: '没有在运行，ChatGPT High 接力发不出去' },
+  );
+
+  // Gemini 4 Neon 在 Antigravity 桌面版里用，由 Claude 经驿窗新开会话交任务；桌面版没开时驿窗会拒收
+  items.push(
+    antigravityRunning === undefined
+      ? { name: 'Antigravity（Gemini）', status: '未核实', detail: '没有检查桌面版进程' }
+      : antigravityRunning
+        ? { name: 'Antigravity（Gemini）', status: '可用', detail: '桌面版在运行；登录状态和驿窗能否送达，以发起时驿窗的返回为准' }
+        : { name: 'Antigravity（Gemini）', status: '不可用', detail: '桌面版没有在运行，驿窗发不过去；先打开 Antigravity' },
   );
 
   const pid = /"PID"\s*=\s*(\d+)/.exec(hermesLaunchctl.out)?.[1];
@@ -150,6 +159,7 @@ export function gather() {
   return {
     readings: readJson(SOURCES.readings),
     postpaneRunning: run('pgrep', ['-f', 'PostPane.app/Contents/MacOS']).code === 0,
+    antigravityRunning: run('pgrep', ['-f', 'Antigravity.app/Contents/MacOS/Antigravity']).code === 0,
     codexLogin: run('codex', ['login', 'status']),
     hermesLaunchctl: run('launchctl', ['list', SOURCES.hermesLabel]),
     accounts: accountHashes(readJson(SOURCES.codexAuth), readJson(SOURCES.hermesAuth)),
