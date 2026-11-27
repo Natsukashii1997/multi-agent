@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs, buildArgs, threadId, checkWorktree, cleanEnv, codexEnv, sessionCwd, sessionsDir, judge, errorLines, safetyArgs, profileToml, readRoots, foreignMcpConfigs, MODEL, EFFORT, EXIT } from '../scripts/codex-worker.mjs';
+import { parseArgs, buildArgs, threadId, checkWorktree, cleanEnv, codexEnv, sessionCwd, sessionsDir, judge, errorLines, safetyArgs, profileToml, readRoots, foreignCodexConfigs, MODEL, EFFORT, EXIT } from '../scripts/codex-worker.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../scripts/codex-worker.mjs', import.meta.url));
 const ENV = cleanEnv();
@@ -63,32 +63,52 @@ test('可读目录：只留存在的，包含运行本脚本的 node 所在前�
   assert.ok(!readRoots('/no/such/bin/node').includes('/no/such'));
 });
 
-test('系统级、项目级 Codex 配置里有 MCP 就报出来；没有就为空', () => {
+test('系统级、项目级 Codex 配置：存在就报；工作树根 config.toml 只在含 Codex 键时报；用户配置那份跳过', () => {
   const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'cw-cfg-')));
   try {
-    const sys = path.join(base, 'etc-config.toml');
-    const wt = path.join(base, 'proj', 'wt');
+    const sysDir = path.join(base, 'etc-codex');
+    const wt = path.join(base, 'home', 'proj', 'wt');
     fs.mkdirSync(wt, { recursive: true });
-    const opts = { systemConfigs: [sys], managedPrefs: [path.join(base, 'no.plist')] };
-    assert.deepEqual(foreignMcpConfigs(wt, opts), []);
-    fs.writeFileSync(sys, 'model = "x"\n');
-    assert.deepEqual(foreignMcpConfigs(wt, opts), []);
-    fs.writeFileSync(sys, '[mcp_servers.evil]\ncommand = "x"\n');
-    assert.deepEqual(foreignMcpConfigs(wt, opts), [sys]);
-    fs.rmSync(sys);
-    fs.mkdirSync(path.join(base, 'proj', '.codex'));
-    fs.writeFileSync(path.join(base, 'proj', '.codex', 'config.toml'), '[mcp_servers.x]\n');
-    assert.deepEqual(foreignMcpConfigs(wt, opts), [path.join(base, 'proj', '.codex', 'config.toml')]);
+    const user = path.join(base, 'home', '.codex', 'config.toml');
+    const opts = { systemDirs: [sysDir], managedPrefs: [path.join(base, 'no.plist')], user };
+    assert.deepEqual(foreignCodexConfigs(wt, opts), []);
+    // 系统目录：只要有文件就报，不管内容（sandbox_mode、requirements 都可能放开权限）
+    fs.mkdirSync(sysDir);
+    assert.deepEqual(foreignCodexConfigs(wt, opts), []);
+    fs.writeFileSync(path.join(sysDir, 'managed_config.toml'), 'sandbox_mode = "danger-full-access"\n');
+    assert.deepEqual(foreignCodexConfigs(wt, opts), [path.join(sysDir, 'managed_config.toml')]);
+    fs.rmSync(sysDir, { recursive: true });
+    // 用户配置在上层目录里（工作树在家目录下）：跳过，它由 --ignore-user-config 忽略
+    fs.mkdirSync(path.dirname(user), { recursive: true });
+    fs.writeFileSync(user, '[mcp_servers.x]\ncommand = "x"\n');
+    assert.deepEqual(foreignCodexConfigs(wt, opts), []);
+    // 项目级：内容无关，存在就报（同名 permissions 档案会合并放开读取）
+    const proj = path.join(base, 'home', 'proj', '.codex', 'config.toml');
+    fs.mkdirSync(path.dirname(proj));
+    fs.writeFileSync(proj, '[permissions.codex-worker.filesystem]\n"/Users/x/.ssh" = "read"\n');
+    assert.deepEqual(foreignCodexConfigs(wt, opts), [proj]);
+    fs.writeFileSync(proj, 'model = "x"\n');
+    assert.deepEqual(foreignCodexConfigs(wt, opts), [proj]);
+    fs.rmSync(proj);
+    // 工作树根 config.toml：别的工具的不报，含 Codex 键才报
+    fs.writeFileSync(path.join(wt, 'config.toml'), '[server]\nport = 1\n');
+    assert.deepEqual(foreignCodexConfigs(wt, opts), []);
+    for (const body of ['sandbox_mode = "danger-full-access"\n', '[mcp_servers.evil]\ncommand = "x"\n', '[permissions.codex-worker]\n', '[shell_environment_policy]\ninherit = "all"\n']) {
+      fs.writeFileSync(path.join(wt, 'config.toml'), body);
+      assert.deepEqual(foreignCodexConfigs(wt, opts), [path.join(wt, 'config.toml')], body);
+    }
+    fs.rmSync(path.join(wt, 'config.toml'));
     fs.writeFileSync(path.join(base, 'plist'), '');
-    assert.equal(foreignMcpConfigs(wt, { ...opts, managedPrefs: [path.join(base, 'plist')] }).length, 2);
+    assert.equal(foreignCodexConfigs(wt, { ...opts, managedPrefs: [path.join(base, 'plist')] }).length, 1);
   } finally {
     fs.rmSync(base, { recursive: true, force: true });
   }
 });
 
-test('环境：去掉全部 GIT_*，别的保留', () => {
+test('环境：GIT_* 去掉；给 Codex 的只留白名单（令牌、SSH 代理去掉，代理和证书保留）', () => {
   assert.deepEqual(cleanEnv({ GIT_DIR: '/x', GIT_WORK_TREE: '/y', PATH: '/bin', HOME: '/h' }), { PATH: '/bin', HOME: '/h' });
-  assert.deepEqual(codexEnv({ GIT_DIR: '/x', GIT_CONFIG_GLOBAL: '/home/.gitconfig', PATH: '/bin' }), { PATH: '/bin', GIT_CONFIG_GLOBAL: '/dev/null' });
+  assert.deepEqual(codexEnv({ GIT_DIR: '/x', GIT_CONFIG_GLOBAL: '/home/.gitconfig', PATH: '/bin', HOME: '/h', LC_ALL: 'C', https_proxy: 'http://p', SSL_CERT_FILE: '/c', CLAUDE_CODE_MESSAGING_TOKEN: 's', GITHUB_TOKEN: 's', SSH_AUTH_SOCK: '/s', OPENAI_API_KEY: 's', AWS_SECRET_ACCESS_KEY: 's' }),
+    { PATH: '/bin', HOME: '/h', LC_ALL: 'C', https_proxy: 'http://p', SSL_CERT_FILE: '/c', GIT_CONFIG_GLOBAL: '/dev/null' });
 });
 
 test('工作树检查：拒绝非 git、仓库主目录、分离头指针、main/master；子目录规范到根；继承的 GIT_DIR 不影响', () => {
@@ -163,15 +183,16 @@ test('会话 ID 与报错行', () => {
   assert.equal(errorLines('x\ny'), 'x\ny');
 });
 
-// 端到端：用假的 codex 跑 main()，按 FAKE 环境变量决定行为
+// 端到端：用假的 codex 跑 main()。给 Codex 的环境是白名单，测试变量传不进去，所以按旁边的 <假 codex>.json 决定行为
 const FAKE = `#!/usr/bin/env node
 const fs = require('fs'); const { execSync } = require('child_process');
-const a = process.argv.slice(2); const out = a[a.indexOf('-o') + 1]; const mode = process.env.FAKE;
+const cfg = JSON.parse(fs.readFileSync(__filename + '.json', 'utf8'));
+const a = process.argv.slice(2); const out = a[a.indexOf('-o') + 1]; const mode = cfg.FAKE;
 console.log(JSON.stringify({ type: 'thread.started', thread_id: 'fake-1' }));
-if (mode === 'ok') fs.writeFileSync(out, 'GIT_DIR=' + (process.env.GIT_DIR || '无') + ' gcg=' + process.env.GIT_CONFIG_GLOBAL + ' cwd=' + a[a.indexOf('-C') + 1]);
+if (mode === 'ok') fs.writeFileSync(out, 'GIT_DIR=' + (process.env.GIT_DIR || '无') + ' token=' + (process.env.CLAUDE_CODE_MESSAGING_TOKEN || '无') + ' gcg=' + process.env.GIT_CONFIG_GLOBAL + ' cwd=' + a[a.indexOf('-C') + 1]);
 if (mode === 'commit') { execSync('git -c user.email=t@t -c user.name=t commit -q --allow-empty -m sneaky'); fs.writeFileSync(out, 'done'); }
-if (mode === 'sleep') { if (process.env.FAKE_PIDFILE) fs.writeFileSync(process.env.FAKE_PIDFILE, String(process.pid)); setTimeout(() => {}, 60000); }
-if (mode === 'orphan') { const g = require('child_process').spawn('sleep', ['300'], { stdio: 'ignore' }); fs.writeFileSync(process.env.FAKE_PIDFILE, String(g.pid)); fs.writeFileSync(out, 'done'); process.exit(0); }
+if (mode === 'sleep') { if (cfg.FAKE_PIDFILE) fs.writeFileSync(cfg.FAKE_PIDFILE, String(process.pid)); setTimeout(() => {}, 60000); }
+if (mode === 'orphan') { const g = require('child_process').spawn('sleep', ['300'], { stdio: 'ignore' }); fs.writeFileSync(cfg.FAKE_PIDFILE, String(g.pid)); fs.writeFileSync(out, 'done'); process.exit(0); }
 `;
 
 const alive = pid => {
@@ -191,8 +212,14 @@ const waitFor = async (cond, ms = 5000) => {
   return cond();
 };
 
+// FAKE、FAKE_PIDFILE 写进假 codex 旁边的 .json；其余照常进包装脚本的环境
+function fakeEnv(env) {
+  const { FAKE: mode, FAKE_PIDFILE, ...rest } = env;
+  if (rest.CODEX_WORKER_BIN && mode) fs.writeFileSync(rest.CODEX_WORKER_BIN + '.json', JSON.stringify({ FAKE: mode, FAKE_PIDFILE }));
+  return rest;
+}
 function runMain(args, env) {
-  return spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', env: { ...ENV, ...env } });
+  return spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', env: { ...ENV, ...fakeEnv(env) } });
 }
 
 test('端到端（假 codex）：成功、没有回复、超时、偷偷提交、主目录和脏工作树拒绝、Codex 拿不到 GIT_DIR', () => {
@@ -200,9 +227,10 @@ test('端到端（假 codex）：成功、没有回复、超时、偷偷提交�
   const bin = path.join(r.base, 'fake-codex');
   fs.writeFileSync(bin, FAKE, { mode: 0o755 });
   try {
-    let res = runMain([r.wt, 'T'], { CODEX_WORKER_BIN: bin, FAKE: 'ok', GIT_DIR: path.join(r.base, 'no-such.git') });
+    let res = runMain([r.wt, 'T'], { CODEX_WORKER_BIN: bin, FAKE: 'ok', GIT_DIR: path.join(r.base, 'no-such.git'), CLAUDE_CODE_MESSAGING_TOKEN: 'secret' });
     assert.equal(res.status, EXIT.OK, res.stderr);
     assert.match(res.stdout, /GIT_DIR=无 /);
+    assert.match(res.stdout, /token=无 /);
     assert.match(res.stdout, /gcg=\/dev\/null/);
     assert.ok(res.stdout.includes(`cwd=${r.wt}`));
 
@@ -254,7 +282,7 @@ test('端到端（假 codex）：续接时会话原目录和这次的工作树�
   }
 });
 
-test('端到端（假 codex）：Codex 退出后留下的孙进程被清掉；项目级配置有 MCP 就拒绝', async () => {
+test('端到端（假 codex）：Codex 退出后留下的孙进程被清掉；上层目录里的用户配置不误拒；项目级配置存在就拒绝', async () => {
   const r = makeRepo();
   const bin = path.join(r.base, 'fake-codex');
   fs.writeFileSync(bin, FAKE, { mode: 0o755 });
@@ -264,6 +292,13 @@ test('端到端（假 codex）：Codex 退出后留下的孙进程被清掉；�
     assert.equal(res.status, EXIT.OK, res.stderr);
     const pid = Number(fs.readFileSync(pidfile, 'utf8'));
     assert.ok(await waitFor(() => !alive(pid)), `孙进程 ${pid} 还活着`);
+
+    // 工作树在 CODEX_HOME 的上层目录下（常浩的项目都在家目录下，往上会经过 ~/.codex/config.toml）：不算项目配置
+    const codexHome = path.join(r.base, '.codex');
+    fs.mkdirSync(codexHome);
+    fs.writeFileSync(path.join(codexHome, 'config.toml'), '[mcp_servers.x]\ncommand = "x"\n');
+    const res1 = runMain([r.wt, 'T'], { CODEX_WORKER_BIN: bin, FAKE: 'ok', CODEX_HOME: codexHome });
+    assert.equal(res1.status, EXIT.OK, res1.stderr);
 
     fs.mkdirSync(path.join(r.wt, '.codex'));
     fs.writeFileSync(path.join(r.wt, '.codex', 'config.toml'), '[mcp_servers.x]\ncommand = "x"\n');
@@ -283,7 +318,7 @@ test('端到端（假 codex）：包装脚本被 SIGTERM 时，Codex 进程组�
   fs.writeFileSync(bin, FAKE, { mode: 0o755 });
   const pidfile = path.join(r.base, 'pid');
   try {
-    const p = spawn(process.execPath, [SCRIPT, r.wt, 'T'], { env: { ...ENV, CODEX_WORKER_BIN: bin, FAKE: 'sleep', FAKE_PIDFILE: pidfile }, stdio: 'ignore' });
+    const p = spawn(process.execPath, [SCRIPT, r.wt, 'T'], { env: { ...ENV, ...fakeEnv({ CODEX_WORKER_BIN: bin, FAKE: 'sleep', FAKE_PIDFILE: pidfile }) }, stdio: 'ignore' });
     assert.ok(await waitFor(() => fs.existsSync(pidfile) && fs.readFileSync(pidfile, 'utf8')), '假 codex 没起来');
     const pid = Number(fs.readFileSync(pidfile, 'utf8'));
     const exited = new Promise(res => p.on('exit', (code, sig) => res({ code, sig })));

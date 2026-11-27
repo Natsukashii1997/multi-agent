@@ -22,7 +22,7 @@ const CODEX_BIN = process.env.CODEX_WORKER_BIN || 'codex';
 
 // 权限用 Codex 的权限档案（default_permissions + [permissions.codex-worker]），不用旧的 sandbox_mode（两者不能混用）：
 // - 不读用户 config.toml（那里默认 danger-full-access，还挂着 7 个 MCP 服务、插件和钩子）；关掉 apps 连接器（含 GitHub 评论等
-//   对外动作）、goals 和子代理（agents.enabled=false）；mcp_servers 置空，系统级和项目级配置里有 MCP 的由 foreignMcpConfigs 事前拒绝。
+//   对外动作）、goals 和子代理（agents.enabled=false）；mcp_servers 置空只是顺手，不靠它：系统级和项目级配置由 foreignCodexConfigs 事前拒绝。
 // - 文件系统：根目录全部不可读，只放开系统运行必需的 :minimal 和工具链目录（READ_ROOTS）；工作树可写（继承 :workspace，
 //   它也让 $TMPDIR 和 /tmp 可写，测试和构建常要用）；网络关。
 // 2026-11-27 实测（Codex 0.166.0，macOS）：~/.zshrc、~/.ssh 读不到（Operation not permitted），curl 连不出，工作树外写入被拒，
@@ -51,23 +51,33 @@ export function safetyArgs(roots = readRoots()) {
   ];
 }
 
-// 用户配置被忽略，但系统级（/etc/codex、macOS 托管偏好）和项目级（工作树及上层目录的 .codex/config.toml）配置仍可能加载 MCP。
-// 有就拒绝派活，不赌命令行能不能把它们清掉。
-export const SYSTEM_CONFIGS = ['/etc/codex/config.toml', '/etc/codex/managed_config.toml', '/etc/codex/requirements.toml'];
+// --ignore-user-config 只跳过 $CODEX_HOME/config.toml。系统级（/etc/codex、macOS 托管偏好）和项目级（工作树及上层目录的
+// .codex/config.toml、工作树根的 config.toml）配置照样加载，里面的 sandbox_mode 会让权限档案失效，同名 permissions 档案会和
+// 命令行的合并、重新放开读取，mcp_servers={} 也清不掉已有的 MCP（Codex 上游 issue #16045，0.166.0 仍在）。所以不赌命令行
+// 盖得住：系统级、项目级 .codex/config.toml 只要存在就拒绝派活；工作树根的 config.toml 常是别的工具的，只在含 Codex 键时拒绝。
+// 用户配置本身（CODEX_HOME 下那份）不算项目配置，跳过：工作树在家目录下时，往上找会经过 ~/.codex/config.toml。
+export const SYSTEM_DIRS = ['/etc/codex'];
 export const MANAGED_PREFS = ['/Library/Managed Preferences/com.openai.codex.plist'];
-export function foreignMcpConfigs(root, { systemConfigs = SYSTEM_CONFIGS, managedPrefs = MANAGED_PREFS } = {}) {
+export const userConfig = (env = process.env) => path.join(env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'config.toml');
+const CODEX_KEYS = /^\s*\[*\s*"?(sandbox_mode|sandbox_workspace_write|default_permissions|permissions|mcp_servers|shell_environment_policy|profiles?|approval_policy|model_providers|features|plugins|agents|apps)\b/m;
+export function foreignCodexConfigs(root, { systemDirs = SYSTEM_DIRS, managedPrefs = MANAGED_PREFS, user = userConfig() } = {}) {
   const hits = [];
-  const projectConfigs = [];
-  for (let d = root; ; d = path.dirname(d)) {
-    projectConfigs.push(path.join(d, '.codex', 'config.toml'));
-    if (path.dirname(d) === d) break;
-  }
-  for (const f of [...systemConfigs, ...projectConfigs]) {
+  for (const d of systemDirs) {
     try {
-      if (/mcp_servers/.test(fs.readFileSync(f, 'utf8'))) hits.push(f);
+      for (const f of fs.readdirSync(d)) hits.push(path.join(d, f));
     } catch {}
   }
   for (const f of managedPrefs) if (fs.existsSync(f)) hits.push(f);
+  const skip = fs.existsSync(user) ? fs.realpathSync(user) : user;
+  for (let d = root; ; d = path.dirname(d)) {
+    const f = path.join(d, '.codex', 'config.toml');
+    if (fs.existsSync(f) && fs.realpathSync(f) !== skip) hits.push(f);
+    if (path.dirname(d) === d) break;
+  }
+  try {
+    const f = path.join(root, 'config.toml');
+    if (CODEX_KEYS.test(fs.readFileSync(f, 'utf8'))) hits.push(f);
+  } catch {}
   return hits;
 }
 
@@ -118,8 +128,11 @@ export function buildArgs({ task, resume, lastFile, dir }) {
 // 去掉继承来的 GIT_*：钩子等场景下 GIT_DIR 会指向别的仓库（全局坑 G-46）。git 检查和 Codex 子进程都用它
 export const cleanEnv = (env = process.env) => Object.fromEntries(Object.entries(env).filter(([k]) => !k.startsWith('GIT_')));
 
-// 给 Codex 的环境：去掉 GIT_*，再让 git 不读用户的 ~/.gitconfig（沙箱里读不到会直接报错退出，那里也可能有凭据配置）
-export const codexEnv = (env = process.env) => ({ ...cleanEnv(env), GIT_CONFIG_GLOBAL: '/dev/null' });
+// 给 Codex 的环境只留白名单：Codex 跑的命令继承它，派活会话的环境里有令牌（如 CLAUDE_CODE_MESSAGING_TOKEN）和 SSH_AUTH_SOCK，
+// 模型跑一下 env 就能读到。留下的是运行和登录要用的（代理、证书给 Codex 自己连服务端用）。GIT_* 一个不留，再让 git 不读用户的
+// ~/.gitconfig（沙箱里读不到会直接报错退出，那里也可能有凭据配置）。
+const ENV_KEEP = /^(PATH|HOME|USER|LOGNAME|SHELL|TMPDIR|LANG|LC_[A-Z]+|TERM|TZ|CODEX_HOME|SSL_CERT_FILE|SSL_CERT_DIR|NODE_EXTRA_CA_CERTS|CODEX_CA_CERTIFICATE|(HTTPS?|ALL|NO)_PROXY)$/i;
+export const codexEnv = (env = process.env) => ({ ...Object.fromEntries(Object.entries(env).filter(([k]) => ENV_KEEP.test(k))), GIT_CONFIG_GLOBAL: '/dev/null' });
 
 const gitIn = (dir, args) => {
   const r = spawnSync('git', args, { cwd: dir, encoding: 'utf8', env: cleanEnv() });
@@ -284,9 +297,9 @@ async function main(argv) {
     console.error(wt.error);
     return EXIT.BAD_INPUT;
   }
-  const mcp = foreignMcpConfigs(wt.root);
-  if (mcp.length) {
-    console.error(`这些系统级或项目级 Codex 配置可能给派出去的 Codex 加载 MCP 服务，拒绝派活：\n${mcp.join('\n')}`);
+  const foreign = foreignCodexConfigs(wt.root);
+  if (foreign.length) {
+    console.error(`这些系统级或项目级 Codex 配置会叠加到派出去的 Codex 上，可能放开权限或加载 MCP 服务，拒绝派活（移走或删掉后再派）：\n${foreign.join('\n')}`);
     return EXIT.BAD_INPUT;
   }
   const before = snapshot(wt.root);
