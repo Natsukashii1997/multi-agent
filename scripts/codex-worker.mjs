@@ -20,23 +20,59 @@ const PROTECTED = new Set(['main', 'master']);
 // 测试用：换成假的 codex 可执行文件，验证超时、无回复等分支
 const CODEX_BIN = process.env.CODEX_WORKER_BIN || 'codex';
 
-// 权限：不读用户 config.toml（那里默认 danger-full-access，还挂着 7 个 MCP 服务和钩子）；关掉账号自带的 apps 连接器
-// （含 GitHub 评论等对外动作）和 goals；沙箱 workspace-write、网络关、额外可写目录清空、不联网搜索、不弹批准。
-// 临时目录保持可写：测试和构建工具常要 TMPDIR；-o 回复文件由 Codex 主进程写，不受沙箱限制。
-// 2026-11-27 实测：这样启动后用户 MCP、钩子、apps 连接器都不出现，沙箱里 curl 连不出去，往工作树外写被拒。
-export const SAFETY = [
-  '--ignore-user-config',
-  '--disable', 'apps',
-  '--disable', 'goals',
-  '-c', 'sandbox_mode="workspace-write"',
-  '-c', 'sandbox_workspace_write.network_access=false',
-  '-c', 'sandbox_workspace_write.writable_roots=[]',
-  '-c', 'web_search="disabled"',
-  '-c', 'approval_policy="never"',
-];
+// 权限用 Codex 的权限档案（default_permissions + [permissions.codex-worker]），不用旧的 sandbox_mode（两者不能混用）：
+// - 不读用户 config.toml（那里默认 danger-full-access，还挂着 7 个 MCP 服务、插件和钩子）；关掉 apps 连接器（含 GitHub 评论等
+//   对外动作）、goals 和子代理（agents.enabled=false）；mcp_servers 置空，系统级和项目级配置里有 MCP 的由 foreignMcpConfigs 事前拒绝。
+// - 文件系统：根目录全部不可读，只放开系统运行必需的 :minimal 和工具链目录（READ_ROOTS）；工作树可写（继承 :workspace，
+//   它也让 $TMPDIR 和 /tmp 可写，测试和构建常要用）；网络关。
+// 2026-11-27 实测（Codex 0.166.0，macOS）：~/.zshrc、~/.ssh 读不到（Operation not permitted），curl 连不出，工作树外写入被拒，
+// 工具里没有用户 MCP、apps、子代理。
+export const PROFILE = 'codex-worker';
+export function readRoots(execPath = process.execPath) {
+  // node 自己的前缀；Homebrew；Xcode 命令行工具（/usr/bin/git 要用）；系统 OpenSSL 配置（node 启动要读 openssl.cnf）
+  const candidates = [path.dirname(path.dirname(execPath)), '/opt/homebrew', '/usr/local', '/Library/Developer/CommandLineTools', '/System/Library/OpenSSL'];
+  return [...new Set(candidates)].filter(p => fs.existsSync(p));
+}
+export function profileToml(roots) {
+  const fsRules = [['":root"', '"deny"'], ['":minimal"', '"read"'], ...roots.map(r => [JSON.stringify(r), '"read"'])].map(([k, v]) => `${k}=${v}`).join(', ');
+  return `permissions.${PROFILE}={extends=":workspace", filesystem={${fsRules}}, network={enabled=false}}`;
+}
+export function safetyArgs(roots = readRoots()) {
+  return [
+    '--ignore-user-config',
+    '--disable', 'apps',
+    '--disable', 'goals',
+    '-c', 'agents.enabled=false',
+    '-c', 'mcp_servers={}',
+    '-c', `default_permissions="${PROFILE}"`,
+    '-c', profileToml(roots),
+    '-c', 'web_search="disabled"',
+    '-c', 'approval_policy="never"',
+  ];
+}
 
-// 任务前面的规矩：它只看得到任务和工作树，接口、验收标准、要一起改的同类由派活的一方写进任务。
-// 不提交由脚本前后比对 HEAD 兜底；不推送、不装依赖由网络关闭兜底。
+// 用户配置被忽略，但系统级（/etc/codex、macOS 托管偏好）和项目级（工作树及上层目录的 .codex/config.toml）配置仍可能加载 MCP。
+// 有就拒绝派活，不赌命令行能不能把它们清掉。
+export const SYSTEM_CONFIGS = ['/etc/codex/config.toml', '/etc/codex/managed_config.toml', '/etc/codex/requirements.toml'];
+export const MANAGED_PREFS = ['/Library/Managed Preferences/com.openai.codex.plist'];
+export function foreignMcpConfigs(root, { systemConfigs = SYSTEM_CONFIGS, managedPrefs = MANAGED_PREFS } = {}) {
+  const hits = [];
+  const projectConfigs = [];
+  for (let d = root; ; d = path.dirname(d)) {
+    projectConfigs.push(path.join(d, '.codex', 'config.toml'));
+    if (path.dirname(d) === d) break;
+  }
+  for (const f of [...systemConfigs, ...projectConfigs]) {
+    try {
+      if (/mcp_servers/.test(fs.readFileSync(f, 'utf8'))) hits.push(f);
+    } catch {}
+  }
+  for (const f of managedPrefs) if (fs.existsSync(f)) hits.push(f);
+  return hits;
+}
+
+// 任务前面的规矩：接口、验收标准、要一起改的同类由派活的一方写进任务。
+// 不提交：独立工作树的 git 数据在主仓库 .git 里、不在可写范围，加上脚本前后比对 HEAD 和 reflog；不推送、不装依赖：网络关。
 export const RULES = [
   '只修改当前工作树里的文件。不要提交、不要推送、不要安装依赖、不要联网。',
   '按任务里给的接口和验收标准做；任务没说清、或你认为接口有问题，停下在回复里写明，不要自己改接口。',
@@ -70,7 +106,7 @@ export function parseArgs(argv) {
 // 所有选项都放在 exec 这一级、resume 之前：实测 `codex exec -C <B> ... resume <A 的会话>` 会在 B 里续接
 export function buildArgs({ task, resume, lastFile, dir }) {
   return [
-    'exec', ...SAFETY,
+    'exec', ...safetyArgs(),
     '-C', dir,
     '-m', MODEL, '-c', `model_reasoning_effort="${EFFORT}"`,
     '--json', '-o', lastFile,
@@ -81,6 +117,9 @@ export function buildArgs({ task, resume, lastFile, dir }) {
 
 // 去掉继承来的 GIT_*：钩子等场景下 GIT_DIR 会指向别的仓库（全局坑 G-46）。git 检查和 Codex 子进程都用它
 export const cleanEnv = (env = process.env) => Object.fromEntries(Object.entries(env).filter(([k]) => !k.startsWith('GIT_')));
+
+// 给 Codex 的环境：去掉 GIT_*，再让 git 不读用户的 ~/.gitconfig（沙箱里读不到会直接报错退出，那里也可能有凭据配置）
+export const codexEnv = (env = process.env) => ({ ...cleanEnv(env), GIT_CONFIG_GLOBAL: '/dev/null' });
 
 const gitIn = (dir, args) => {
   const r = spawnSync('git', args, { cwd: dir, encoding: 'utf8', env: cleanEnv() });
@@ -113,12 +152,16 @@ export function snapshot(root) {
     head: gitIn(root, ['rev-parse', 'HEAD']).out,
     branch: gitIn(root, ['branch', '--show-current']).out,
     status: gitIn(root, ['status', '--porcelain']).out,
+    reflog: gitIn(root, ['reflog', 'show', '--format=%H', 'HEAD']).out.split('\n').filter(Boolean).length,
   };
 }
 
-// 续接前核对：会话记录 ~/.codex/sessions/年/月/日/rollout-*-<ID>.jsonl 第一行 session_meta 的 cwd
-export function sessionCwd(id, base = path.join(os.homedir(), '.codex', 'sessions')) {
+// 续接前核对：会话记录在 $CODEX_HOME/sessions（没设就是 ~/.codex/sessions）/年/月/日/rollout-*-<ID>.jsonl，
+// 第一行 session_meta 的 payload.id 要等于 <ID>，取其 cwd；找不到、或多份记录的 cwd 不一致，都返回 null（拒绝续接）
+export const sessionsDir = (env = process.env) => path.join(env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions');
+export function sessionCwd(id, base = sessionsDir()) {
   if (!/^[0-9a-f-]{8,}$/i.test(id)) return null;
+  const cwds = new Set();
   const stack = [base];
   while (stack.length) {
     const d = stack.pop();
@@ -134,14 +177,12 @@ export function sessionCwd(id, base = path.join(os.homedir(), '.codex', 'session
       else if (e.name.endsWith(`-${id}.jsonl`)) {
         try {
           const meta = JSON.parse(fs.readFileSync(p, 'utf8').split('\n')[0]);
-          return meta?.type === 'session_meta' && typeof meta.payload?.cwd === 'string' ? meta.payload.cwd : null;
-        } catch {
-          return null;
-        }
+          if (meta?.type === 'session_meta' && meta.payload?.id === id && typeof meta.payload.cwd === 'string') cwds.add(meta.payload.cwd);
+        } catch {}
       }
     }
   }
-  return null;
+  return cwds.size === 1 ? [...cwds][0] : null;
 }
 
 // --json 输出是一行一个事件，会话 ID 在 thread.started 里
@@ -162,12 +203,13 @@ export function errorLines(text) {
   return (errors.length ? errors : lines.slice(-10)).join('\n');
 }
 
-// 跑 Codex：单独进程组，超时先 SIGTERM 整组、10 秒后 SIGKILL，不留子进程
+// 跑 Codex：单独进程组。超时先 SIGTERM 整组、10 秒后 SIGKILL；Codex 退出后再 SIGKILL 整组一次，清掉关了输出还在跑的孙进程；
+// 包装脚本自己收到 SIGINT/SIGTERM 时也先清掉整组再退出
 export function runCodex(args, { cwd, timeoutMs }) {
   return new Promise(resolve => {
     let child;
     try {
-      child = spawn(CODEX_BIN, args, { cwd, env: cleanEnv(), stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+      child = spawn(CODEX_BIN, args, { cwd, env: codexEnv(), stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     } catch (error) {
       resolve({ startError: error, stdout: '', stderr: '' });
       return;
@@ -175,6 +217,7 @@ export function runCodex(args, { cwd, timeoutMs }) {
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+    let killTimer = null;
     child.stdout.on('data', d => (stdout += d));
     child.stderr.on('data', d => (stderr += d));
     const killGroup = sig => {
@@ -182,19 +225,30 @@ export function runCodex(args, { cwd, timeoutMs }) {
         process.kill(-child.pid, sig);
       } catch {}
     };
+    const onParentSignal = sig => {
+      killGroup('SIGTERM');
+      setTimeout(() => {
+        killGroup('SIGKILL');
+        process.exit(sig === 'SIGINT' ? 130 : 143);
+      }, 2000);
+    };
+    process.once('SIGINT', onParentSignal);
+    process.once('SIGTERM', onParentSignal);
     const timer = setTimeout(() => {
       timedOut = true;
       killGroup('SIGTERM');
-      setTimeout(() => killGroup('SIGKILL'), 10000).unref();
+      killTimer = setTimeout(() => killGroup('SIGKILL'), 10000);
     }, timeoutMs);
-    child.on('error', error => {
+    const finish = result => {
       clearTimeout(timer);
-      resolve({ startError: error, stdout, stderr });
-    });
-    child.on('close', (code, signal) => {
-      clearTimeout(timer);
-      resolve({ code, signal, timedOut, stdout, stderr });
-    });
+      clearTimeout(killTimer);
+      killGroup('SIGKILL');
+      process.removeListener('SIGINT', onParentSignal);
+      process.removeListener('SIGTERM', onParentSignal);
+      resolve(result);
+    };
+    child.on('error', error => finish({ startError: error, stdout, stderr }));
+    child.on('close', (code, signal) => finish({ code, signal, timedOut, stdout, stderr }));
   });
 }
 
@@ -203,8 +257,8 @@ export function judge({ run, last, before, after }) {
   if (run.startError) return { exit: EXIT.START_FAILED, label: 'START_FAILED', detail: `codex 启动失败：${run.startError.code || ''} ${run.startError.message}`.trim() };
   if (run.timedOut) return { exit: EXIT.TIMEOUT, label: 'TIMEOUT', detail: '超时，已终止 Codex 进程组' };
   if (run.signal) return { exit: EXIT.SIGNALED, label: 'SIGNALED', detail: `Codex 被信号 ${run.signal} 终止` };
-  if (before && after && (before.head !== after.head || before.branch !== after.branch))
-    return { exit: EXIT.UNEXPECTED_COMMIT, label: 'UNEXPECTED_COMMIT', detail: `工作树被改了提交或分支：${before.branch}@${before.head.slice(0, 7)} → ${after.branch}@${after.head.slice(0, 7)}` };
+  if (before && after && (before.head !== after.head || before.branch !== after.branch || before.reflog !== after.reflog))
+    return { exit: EXIT.UNEXPECTED_COMMIT, label: 'UNEXPECTED_COMMIT', detail: `工作树的提交、分支或 HEAD 记录被改了：${before.branch}@${before.head.slice(0, 7)}（reflog ${before.reflog}）→ ${after.branch}@${after.head.slice(0, 7)}（reflog ${after.reflog}）` };
   if (run.code !== 0) return { exit: EXIT.CODEX_FAILED, label: 'CODEX_FAILED', detail: `Codex 退出码 ${run.code}\n${errorLines(`${run.stderr || ''}\n${run.stdout || ''}`)}` };
   if (!last) return { exit: EXIT.OUTPUT_MISSING, label: 'OUTPUT_MISSING', detail: 'Codex 退出码 0，但没有留下最后一条回复' };
   return { exit: EXIT.OK, label: 'OK', detail: '' };
@@ -228,6 +282,11 @@ async function main(argv) {
   const wt = checkWorktree(given);
   if (wt.error) {
     console.error(wt.error);
+    return EXIT.BAD_INPUT;
+  }
+  const mcp = foreignMcpConfigs(wt.root);
+  if (mcp.length) {
+    console.error(`这些系统级或项目级 Codex 配置可能给派出去的 Codex 加载 MCP 服务，拒绝派活：\n${mcp.join('\n')}`);
     return EXIT.BAD_INPUT;
   }
   const before = snapshot(wt.root);
