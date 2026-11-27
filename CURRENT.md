@@ -5,7 +5,7 @@
 更新：2026-11-08。MA-01、MA-02 契约在 `modes/`，MA-02 已在四处对齐，新规则下有 L1、L3 各 1 次真实运行（另有本仓库 #5、agent-kit#46、#47 三次 L1）。批 A 配套设施已合并（#5，`514db58`）：场景路由 `docs/routing.md`、能力档案 `docs/agent-profile.md` + 探测脚本 `scripts/probe-agents.mjs`、候选卡 `docs/candidates.md`、运行记录 `runs/runs.jsonl`。全局路由一行（agent-kit#46 `2911c84`）已在修完漂移（agent-kit#47 `e33e1cf`）后装到本机，doctor ✓7 ⚠0 ✗0，新开的 Claude / Codex 会话会读到。唯一下一步：常浩 11-08 改为「一个一个做，先把 MA-02 的 skill 跑出来」，MA-03 试跑（候选：trainee-hub PR #27）暂缓。engineering-review 1.0.0 在 my-skills#77、分支 `claude/77-engineering-review`（worktree `~/Documents/ChatGPT/个人/work/.worktrees/my-skills-77`）：治理审计 0 错误 0 警告，盲测第 1 轮 5/5 后按 5 处缺陷修订，第 2 轮打分中；剩：第 2 轮全过 → 开 PR → 按新 skill 走 L1 送审收口 → 常浩批准合并 → links.tsv 已登记、主目录跑 link.sh → 本仓库 MA-02 契约与 routing.md 改为「主 Skill：engineering-review 1.0.0」。
 
 
-## 三家协同：codex-worker、Gemini 4 Neon 入档、MA-04 首次试跑（2026-11-27，Claude，常浩回「按推荐」做主线 ① 和 ③，并定「Gemini 走驿窗」「等驿窗修好」；已提交，PR 待开，无需发布）
+## 三家协同：codex-worker、Gemini 4 Neon 入档、MA-04 首次试跑（2026-11-27，Claude，常浩回「按推荐」做主线 ① 和 ③，并定「Gemini 走驿窗」「等驿窗修好」；PR #19 第 1 轮 MA-02 审查「返修」（P1×3、P2×7、P3×1，审查链 r1a21d4e762101），返修中，已交接新会话；无需发布）
 
 - 时间：开工 `2026-11-27 19:06`。★ 来由：常浩要在原工作流上加 Gemini 4 Neon，三家协同；参考数字生命卡兹克的分工笔记和 CLAUDE.md（分析存 Vault `00 待整理/三家 AI 分岗…`）。
 - 改了哪些文件：`scripts/codex-worker.mjs` + `tests/codex-worker.test.mjs`（派 Codex 写独立模块的包装：固定 gpt-6-luna/high、沙箱 workspace-write、不提交，main/master/分离头指针拒绝，支持续接）；`scripts/probe-agents.mjs` + 测试（加「Antigravity（Gemini）」一项）；`docs/agent-profile.md`（Gemini 4 Neon 档案与交任务写法、codex-worker 用法）；`docs/routing.md`（#04、#06 指向 Gemini）；`docs/candidates.md`（MA-04 用 Gemini 的写法、首跑已做）；`runs/runs.jsonl`（R-20261127-01）；`AGENTS.md`（运行、结构各一行）。
