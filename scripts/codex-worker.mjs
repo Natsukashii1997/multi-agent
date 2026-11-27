@@ -66,10 +66,14 @@ export function errorLines(text) {
   return (errors.length ? errors : lines.slice(-10)).join('\n');
 }
 
-// 去掉继承来的 GIT_*（钩子等场景下 GIT_DIR 会指向别的仓库，全局坑 G-46），只按 dir 判断
-export function checkWorktree(dir) {
+// 去掉继承来的 GIT_*（钩子等场景下 GIT_DIR 会指向别的仓库，全局坑 G-46），只按 dir 看
+const gitIn = (dir, args) => {
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
-  const git = args => (spawnSync('git', args, { cwd: dir, encoding: 'utf8', env }).stdout || '').trim();
+  return (spawnSync('git', args, { cwd: dir, encoding: 'utf8', env }).stdout || '').trim();
+};
+
+export function checkWorktree(dir) {
+  const git = args => gitIn(dir, args);
   if (git(['rev-parse', '--is-inside-work-tree']) !== 'true') return `不是 git 工作树：${dir}`;
   const branch = git(['branch', '--show-current']);
   if (!branch) return '工作树处于分离头指针状态，先切到一个独立分支';
@@ -112,7 +116,7 @@ function main(argv) {
       fs.mkdirSync(path.dirname(path.resolve(opts.out)), { recursive: true });
       fs.writeFileSync(opts.out, last);
     }
-    const changed = spawnSync('git', ['status', '--short'], { cwd: dir, encoding: 'utf8' }).stdout.trim();
+    const changed = gitIn(dir, ['status', '--short']);
     console.log(last || '（Codex 没有留下最后一条回复）');
     console.error(`\n〔Codex ${MODEL} ${EFFORT}｜会话 ${id ?? '未知'}｜退出码 ${r.status}〕\n工作树改动：\n${changed || '（无）'}`);
     if (r.status !== 0) console.error(errorLines(`${r.stderr || ''}\n${r.stdout || ''}`));
