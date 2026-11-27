@@ -52,6 +52,14 @@ test('工作树检查：拒绝非 git 目录、main 分支和分离头指针，�
     assert.match(checkWorktree(dir), /分离头指针/);
     git('checkout', '-q', '-b', 'feature');
     assert.equal(checkWorktree(dir), null);
+    const saved = process.env.GIT_DIR;
+    process.env.GIT_DIR = path.join(os.tmpdir(), 'no-such-repo.git');
+    try {
+      assert.equal(checkWorktree(dir), null, '继承来的 GIT_DIR 不影响判断');
+    } finally {
+      if (saved === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = saved;
+    }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

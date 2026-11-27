@@ -66,10 +66,12 @@ export function errorLines(text) {
   return (errors.length ? errors : lines.slice(-10)).join('\n');
 }
 
+// 去掉继承来的 GIT_*（钩子等场景下 GIT_DIR 会指向别的仓库，全局坑 G-46），只按 dir 判断
 export function checkWorktree(dir) {
-  const git = args => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
-  if (git(['rev-parse', '--is-inside-work-tree']).stdout.trim() !== 'true') return `不是 git 工作树：${dir}`;
-  const branch = git(['branch', '--show-current']).stdout.trim();
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
+  const git = args => (spawnSync('git', args, { cwd: dir, encoding: 'utf8', env }).stdout || '').trim();
+  if (git(['rev-parse', '--is-inside-work-tree']) !== 'true') return `不是 git 工作树：${dir}`;
+  const branch = git(['branch', '--show-current']);
   if (!branch) return '工作树处于分离头指针状态，先切到一个独立分支';
   if (PROTECTED.has(branch)) return `工作树在 ${branch} 分支上，拒绝派活：先开独立分支的工作树`;
   return null;
