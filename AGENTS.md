@@ -44,7 +44,7 @@ node --test tests/*.test.mjs     # 交接格式 + 通用规则（含自测）
 node scripts/check-rules.mjs     # 只跑通用规则检查
 git config core.hooksPath scripts/hooks   # 装提交、推送前的必经检查（每个克隆、每台电脑各一次；不用 --no-verify 绕过）
 node scripts/probe-agents.mjs    # Agent 动态档案：额度、在线、Hermes 与 Codex 是否同一账号（只读，不耗额度）
-node scripts/codex-worker.mjs <工作树> "任务"   # 派 Codex 写独立模块（固定档位、workspace-write 沙箱、不提交）；追加用 --resume <会话ID>
+node scripts/codex-worker.mjs <独立工作树> "任务"   # 派 Codex 写独立模块（不读用户配置、沙箱只写工作树、断网、偷偷提交即失败）；同一工作树续接用 --resume <会话ID>
 ```
 
 ## 结构
